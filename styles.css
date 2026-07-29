@@ -222,6 +222,11 @@ h3 {
   white-space: nowrap;
 }
 
+.increase-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .exercise-card.increase-active {
   border-color: var(--primary);
   background: #fbfdff;

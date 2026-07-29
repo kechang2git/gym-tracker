@@ -237,7 +237,7 @@ function renderActiveWorkout() {
                   ? `<button class="${isIncreased ? "primary" : "secondary"} small increase-button" type="button" data-increase-exercise-id="${item.exerciseId}">
                       ${isIncreased ? "Keep Same" : "Use Increase"}
                     </button>`
-                  : ""
+                  : `<button class="secondary small increase-button" type="button" disabled>No Increase Yet</button>`
               }
             </div>
           </div>
