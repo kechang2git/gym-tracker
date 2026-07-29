@@ -10,6 +10,9 @@ const templates = [
       exercise("machine-chest-press", "Machine Seated Parallel Grip Chest Press", "Machine-1", "3 x 8-12", [40, 55, 65], 12),
       exercise("supinated-row", "Machine Seated Supinated Grip Row", "Machine-1", "3 x 8-12", [30, 40, 45], 12),
       exercise("lat-pulldown", "Close Grip Strict Lat Pulldown", "Machine-1", "3 x 8-12", [50, 60, 70], 12),
+      exercise("machine-shoulder-press", "Machine Shoulder Press", "Machine-1", "3 x 10", ["", "", ""], 10, {
+        keepRepsWhenWeightBlank: true,
+      }),
       exercise("cable-crunch", "Cable Kneeling Crunch", "Machine-1", "3 x 10-12", [50, 50, 60], 12),
     ],
   },
@@ -91,7 +94,7 @@ const els = {
   clearData: document.querySelector("#clearData"),
 };
 
-function exercise(id, name, source, target, defaults, topReps) {
+function exercise(id, name, source, target, defaults, topReps, options = {}) {
   return {
     id,
     name,
@@ -100,6 +103,7 @@ function exercise(id, name, source, target, defaults, topReps) {
     defaults,
     topReps,
     sets: 3,
+    keepRepsWhenWeightBlank: options.keepRepsWhenWeightBlank || false,
   };
 }
 
@@ -266,7 +270,7 @@ function buildActiveExercise(item, useSuggestedIncreases) {
       const hasWeight = weights[index] !== undefined && weights[index] !== "";
       return {
         weight: hasWeight ? weights[index] : "",
-        reps: hasWeight ? item.topReps : "",
+        reps: hasWeight || item.keepRepsWhenWeightBlank ? item.topReps : "",
         done: false,
       };
     }),
