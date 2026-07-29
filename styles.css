@@ -208,27 +208,23 @@ h3 {
   gap: 12px;
 }
 
-.increase-control {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #f8fafc;
-  padding: 12px;
+.exercise-top {
+  align-items: flex-start;
 }
 
-.increase-control p {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 13px;
+.exercise-actions {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
 }
 
-.increase-control.active {
+.increase-button {
+  white-space: nowrap;
+}
+
+.exercise-card.increase-active {
   border-color: var(--primary);
-  background: var(--soft-blue);
+  background: #fbfdff;
 }
 
 .exercise-list {
@@ -471,8 +467,12 @@ dialog::backdrop {
     margin-bottom: 4px;
   }
 
-  .increase-control {
-    align-items: stretch;
-    flex-direction: column;
+  .exercise-top {
+    display: grid;
+    gap: 10px;
+  }
+
+  .exercise-actions {
+    justify-items: stretch;
   }
 }

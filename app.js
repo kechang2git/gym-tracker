@@ -63,9 +63,6 @@ const els = {
   templateGrid: document.querySelector("#templateGrid"),
   activeWorkoutPanel: document.querySelector("#activeWorkoutPanel"),
   activeWorkoutName: document.querySelector("#activeWorkoutName"),
-  increaseModeTitle: document.querySelector("#increaseModeTitle"),
-  increaseModeText: document.querySelector("#increaseModeText"),
-  toggleIncrease: document.querySelector("#toggleIncrease"),
   exerciseList: document.querySelector("#exerciseList"),
   finishWorkout: document.querySelector("#finishWorkout"),
   cancelWorkout: document.querySelector("#cancelWorkout"),
@@ -165,14 +162,13 @@ function startWorkout(templateId) {
     date: new Date().toISOString(),
     templateId: template.id,
     templateName: template.name,
-    useSuggestedIncreases: false,
+    increasedExerciseIds: [],
     notes: "",
     exercises: template.exercises.map((item) => buildActiveExercise(item, false)),
   };
 
   els.activeWorkoutName.textContent = template.name;
   els.activeWorkoutPanel.classList.remove("hidden");
-  renderIncreaseControl();
   renderActiveWorkout();
   renderDashboard();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -203,33 +199,22 @@ function buildActiveExercise(item, useSuggestedIncreases) {
   };
 }
 
-function setIncreaseMode(useSuggestedIncreases) {
+function toggleExerciseIncrease(exerciseId) {
   if (!activeSession) return;
   const template = templates.find((item) => item.id === activeSession.templateId);
-  activeSession.useSuggestedIncreases = useSuggestedIncreases;
-  activeSession.exercises = template.exercises.map((item) => buildActiveExercise(item, useSuggestedIncreases));
-  renderIncreaseControl();
-  renderActiveWorkout();
-}
+  const templateExercise = template.exercises.find((item) => item.id === exerciseId);
+  const currentIndex = activeSession.increasedExerciseIds.indexOf(exerciseId);
+  const shouldIncrease = currentIndex === -1;
 
-function renderIncreaseControl() {
-  if (!activeSession) return;
-  const count = activeSession.exercises.filter((item) => getSuggestionById(item.exerciseId).status === "increase").length;
-  const control = document.querySelector(".increase-control");
-  control.classList.toggle("active", activeSession.useSuggestedIncreases);
-
-  if (activeSession.useSuggestedIncreases) {
-    els.increaseModeTitle.textContent = "Using suggested increases";
-    els.increaseModeText.textContent = `${count} exercise${count === 1 ? "" : "s"} will use higher suggested weights this workout.`;
-    els.toggleIncrease.textContent = "Keep Same";
-    return;
+  if (shouldIncrease) {
+    activeSession.increasedExerciseIds.push(exerciseId);
+  } else {
+    activeSession.increasedExerciseIds.splice(currentIndex, 1);
   }
 
-  els.increaseModeTitle.textContent = "Keep same weights";
-  els.increaseModeText.textContent = count
-    ? `${count} exercise${count === 1 ? "" : "s"} are ready to increase when you choose.`
-    : "No exercises are ready for a weight increase yet.";
-  els.toggleIncrease.textContent = "Use Increases";
+  const exerciseIndex = activeSession.exercises.findIndex((item) => item.exerciseId === exerciseId);
+  activeSession.exercises[exerciseIndex] = buildActiveExercise(templateExercise, shouldIncrease);
+  renderActiveWorkout();
 }
 
 function renderActiveWorkout() {
@@ -237,12 +222,23 @@ function renderActiveWorkout() {
   els.exerciseList.innerHTML = activeSession.exercises
     .map((item, exerciseIndex) => {
       const suggestion = getSuggestionById(item.exerciseId);
+      const isIncreased = activeSession.increasedExerciseIds.includes(item.exerciseId);
+      const canIncrease = suggestion.status === "increase";
       return `
-        <article class="exercise-card">
+        <article class="exercise-card ${isIncreased ? "increase-active" : ""}">
           <div class="exercise-top">
             <div>
               <h3>${item.name}</h3>
               <p class="source">(${item.source}) · ${item.target}</p>
+            </div>
+            <div class="exercise-actions">
+              ${
+                canIncrease
+                  ? `<button class="${isIncreased ? "primary" : "secondary"} small increase-button" type="button" data-increase-exercise-id="${item.exerciseId}">
+                      ${isIncreased ? "Keep Same" : "Use Increase"}
+                    </button>`
+                  : ""
+              }
             </div>
           </div>
           <div class="suggestion">${suggestion.label}</div>
@@ -553,6 +549,12 @@ function escapeHtml(value) {
 }
 
 document.addEventListener("click", (event) => {
+  const increaseButton = event.target.closest("[data-increase-exercise-id]");
+  if (increaseButton) {
+    toggleExerciseIncrease(increaseButton.dataset.increaseExerciseId);
+    return;
+  }
+
   const templateButton = event.target.closest("[data-template-id]");
   if (templateButton) startWorkout(templateButton.dataset.templateId);
 });
@@ -565,10 +567,6 @@ document.addEventListener("input", (event) => {
 });
 
 els.finishWorkout.addEventListener("click", finishWorkout);
-els.toggleIncrease.addEventListener("click", () => {
-  setIncreaseMode(!activeSession.useSuggestedIncreases);
-});
-
 els.cancelWorkout.addEventListener("click", () => {
   activeSession = null;
   els.workoutNotes.value = "";
