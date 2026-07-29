@@ -286,6 +286,36 @@ h3 {
   text-align: center;
 }
 
+.cardio-form {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.cardio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cardio-field {
+  display: grid;
+  gap: 6px;
+}
+
+.cardio-field label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cardio-field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
 .done-toggle {
   display: grid;
   justify-items: center;
@@ -457,6 +487,7 @@ dialog::backdrop {
   }
 
   .template-grid,
+  .cardio-grid,
   .summary-grid {
     grid-template-columns: 1fr;
   }

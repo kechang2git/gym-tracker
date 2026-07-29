@@ -56,6 +56,12 @@ const templates = [
   },
 ];
 
+const cardioTemplates = [
+  cardio("running", "Running", "Cardio", "Track level and minutes"),
+  cardio("elliptical", "Elliptical", "Cardio", "Track level and minutes"),
+  cardio("stair-climbing", "Stair climbing", "Cardio", "Track level and minutes"),
+];
+
 let state = loadState();
 let activeSession = null;
 
@@ -97,6 +103,16 @@ function exercise(id, name, source, target, defaults, topReps) {
   };
 }
 
+function cardio(id, name, source, focus) {
+  return {
+    id,
+    name,
+    source,
+    focus,
+    type: "cardio",
+  };
+}
+
 function loadState() {
   const fallback = { sessions: [] };
   try {
@@ -120,13 +136,14 @@ function render() {
 }
 
 function renderTemplates() {
-  els.templateGrid.innerHTML = templates
+  const allTemplates = [...templates, ...cardioTemplates];
+  els.templateGrid.innerHTML = allTemplates
     .map(
       (template) => `
       <button class="template-card" type="button" data-template-id="${template.id}">
         <strong>${template.name}</strong>
         <span>${template.focus}</span><br />
-        <span>${template.exercises.length} exercises</span>
+        <span>${template.type === "cardio" ? "Cardio workout" : `${template.exercises.length} exercises`}</span>
       </button>
     `,
     )
@@ -156,10 +173,16 @@ function renderDashboard() {
 }
 
 function startWorkout(templateId) {
-  const template = templates.find((item) => item.id === templateId);
+  const template = [...templates, ...cardioTemplates].find((item) => item.id === templateId);
+  if (template.type === "cardio") {
+    startCardioWorkout(template);
+    return;
+  }
+
   activeSession = {
     id: crypto.randomUUID(),
     date: new Date().toISOString(),
+    type: "strength",
     templateId: template.id,
     templateName: template.name,
     increasedExerciseIds: [],
@@ -172,6 +195,57 @@ function startWorkout(templateId) {
   renderActiveWorkout();
   renderDashboard();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function startCardioWorkout(template) {
+  const last = getLastCardioEntry(template.id);
+  activeSession = {
+    id: crypto.randomUUID(),
+    date: new Date().toISOString(),
+    type: "cardio",
+    templateId: template.id,
+    templateName: template.name,
+    cardio: {
+      level: last?.level ?? "",
+      minutes: last?.minutes ?? "",
+    },
+    notes: "",
+    exercises: [],
+  };
+
+  els.activeWorkoutName.textContent = template.name;
+  els.activeWorkoutPanel.classList.remove("hidden");
+  renderCardioWorkout();
+  renderDashboard();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderCardioWorkout() {
+  if (!activeSession) return;
+  els.exerciseList.innerHTML = `
+    <article class="exercise-card">
+      <div class="exercise-top">
+        <div>
+          <h3>${activeSession.templateName}</h3>
+          <p class="source">(Cardio) · Level and minutes</p>
+        </div>
+      </div>
+      <div class="cardio-form">
+        <div class="cardio-grid">
+          <div class="cardio-field">
+            <label for="cardioLevel">Level</label>
+            <input id="cardioLevel" inputmode="decimal" type="number" step="0.5" min="0"
+              value="${activeSession.cardio.level}" data-cardio-field="level" />
+          </div>
+          <div class="cardio-field">
+            <label for="cardioMinutes">Minutes</label>
+            <input id="cardioMinutes" inputmode="numeric" type="number" step="1" min="0"
+              value="${activeSession.cardio.minutes}" data-cardio-field="minutes" />
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
 }
 
 function buildActiveExercise(item, useSuggestedIncreases) {
@@ -296,8 +370,18 @@ function getAllExercises() {
 
 function getLastExerciseEntry(exerciseId) {
   for (const session of state.sessions) {
+    if (!Array.isArray(session.exercises)) continue;
     const entry = session.exercises.find((item) => item.exerciseId === exerciseId);
     if (entry) return entry;
+  }
+  return null;
+}
+
+function getLastCardioEntry(templateId) {
+  for (const session of state.sessions) {
+    if (session.type === "cardio" && session.templateId === templateId && session.cardio) {
+      return session.cardio;
+    }
   }
   return null;
 }
@@ -305,7 +389,7 @@ function getLastExerciseEntry(exerciseId) {
 function getExerciseHistory(exerciseId) {
   return state.sessions
     .flatMap((session) =>
-      session.exercises
+      (session.exercises || [])
         .filter((item) => item.exerciseId === exerciseId)
         .map((item) => ({ ...item, date: session.date, templateName: session.templateName })),
     )
@@ -438,6 +522,19 @@ function renderHistory() {
 
   els.historyList.innerHTML = state.sessions
     .map((session) => {
+      if (session.type === "cardio") {
+        return `
+          <article class="history-item">
+            <div class="history-top">
+              <strong>${session.templateName}</strong>
+              <span>${formatDate(session.date)}</span>
+            </div>
+            <p class="history-meta">Level ${session.cardio?.level || "-"} · ${session.cardio?.minutes || "-"} minutes</p>
+            ${session.notes ? `<p class="history-meta">${escapeHtml(session.notes)}</p>` : ""}
+          </article>
+        `;
+      }
+
       const completed = session.exercises.reduce(
         (sum, item) => sum + item.sets.filter((set) => set.done !== false).length,
         0,
@@ -560,6 +657,12 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (activeSession && event.target.matches("[data-cardio-field]")) {
+    activeSession.cardio[event.target.dataset.cardioField] =
+      event.target.value === "" ? "" : Number(event.target.value);
+    return;
+  }
+
   if (!activeSession || !event.target.matches("[data-field]")) return;
   const { exerciseIndex, setIndex, field } = event.target.dataset;
   const set = activeSession.exercises[exerciseIndex].sets[setIndex];
