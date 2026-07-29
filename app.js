@@ -63,6 +63,9 @@ const els = {
   templateGrid: document.querySelector("#templateGrid"),
   activeWorkoutPanel: document.querySelector("#activeWorkoutPanel"),
   activeWorkoutName: document.querySelector("#activeWorkoutName"),
+  increaseModeTitle: document.querySelector("#increaseModeTitle"),
+  increaseModeText: document.querySelector("#increaseModeText"),
+  toggleIncrease: document.querySelector("#toggleIncrease"),
   exerciseList: document.querySelector("#exerciseList"),
   finishWorkout: document.querySelector("#finishWorkout"),
   cancelWorkout: document.querySelector("#cancelWorkout"),
@@ -162,34 +165,71 @@ function startWorkout(templateId) {
     date: new Date().toISOString(),
     templateId: template.id,
     templateName: template.name,
+    useSuggestedIncreases: false,
     notes: "",
-    exercises: template.exercises.map((item) => {
-      const last = getLastExerciseEntry(item.id);
-      const suggestion = getSuggestion(item);
-      const weights = suggestion.nextWeights || last?.sets.map((set) => set.weight) || item.defaults;
-      return {
-        exerciseId: item.id,
-        name: item.name,
-        source: item.source,
-        target: item.target,
-        topReps: item.topReps,
-        sets: Array.from({ length: item.sets }, (_, index) => {
-          const hasWeight = weights[index] !== undefined && weights[index] !== "";
-          return {
-            weight: hasWeight ? weights[index] : "",
-            reps: hasWeight ? item.topReps : "",
-            done: false,
-          };
-        }),
-      };
-    }),
+    exercises: template.exercises.map((item) => buildActiveExercise(item, false)),
   };
 
   els.activeWorkoutName.textContent = template.name;
   els.activeWorkoutPanel.classList.remove("hidden");
+  renderIncreaseControl();
   renderActiveWorkout();
   renderDashboard();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function buildActiveExercise(item, useSuggestedIncreases) {
+  const last = getLastExerciseEntry(item.id);
+  const suggestion = getSuggestion(item);
+  const shouldIncrease = useSuggestedIncreases && suggestion.status === "increase";
+  const weights = shouldIncrease
+    ? suggestion.nextWeights
+    : last?.sets.map((set) => set.weight) || item.defaults;
+
+  return {
+    exerciseId: item.id,
+    name: item.name,
+    source: item.source,
+    target: item.target,
+    topReps: item.topReps,
+    sets: Array.from({ length: item.sets }, (_, index) => {
+      const hasWeight = weights[index] !== undefined && weights[index] !== "";
+      return {
+        weight: hasWeight ? weights[index] : "",
+        reps: hasWeight ? item.topReps : "",
+        done: false,
+      };
+    }),
+  };
+}
+
+function setIncreaseMode(useSuggestedIncreases) {
+  if (!activeSession) return;
+  const template = templates.find((item) => item.id === activeSession.templateId);
+  activeSession.useSuggestedIncreases = useSuggestedIncreases;
+  activeSession.exercises = template.exercises.map((item) => buildActiveExercise(item, useSuggestedIncreases));
+  renderIncreaseControl();
+  renderActiveWorkout();
+}
+
+function renderIncreaseControl() {
+  if (!activeSession) return;
+  const count = activeSession.exercises.filter((item) => getSuggestionById(item.exerciseId).status === "increase").length;
+  const control = document.querySelector(".increase-control");
+  control.classList.toggle("active", activeSession.useSuggestedIncreases);
+
+  if (activeSession.useSuggestedIncreases) {
+    els.increaseModeTitle.textContent = "Using suggested increases";
+    els.increaseModeText.textContent = `${count} exercise${count === 1 ? "" : "s"} will use higher suggested weights this workout.`;
+    els.toggleIncrease.textContent = "Keep Same";
+    return;
+  }
+
+  els.increaseModeTitle.textContent = "Keep same weights";
+  els.increaseModeText.textContent = count
+    ? `${count} exercise${count === 1 ? "" : "s"} are ready to increase when you choose.`
+    : "No exercises are ready for a weight increase yet.";
+  els.toggleIncrease.textContent = "Use Increases";
 }
 
 function renderActiveWorkout() {
@@ -300,7 +340,7 @@ function getSuggestionById(exerciseId, templateExercise = null) {
     const increment = isDumbbellExercise(last.name) ? 2.5 : 5;
     return {
       status: "increase",
-      label: `Next time: increase by ${increment} lbs if form was clean.`,
+      label: `Ready: you can increase by ${increment} lbs when you choose.`,
       nextWeights: weights.map((weight) => weight + increment),
     };
   }
@@ -525,6 +565,10 @@ document.addEventListener("input", (event) => {
 });
 
 els.finishWorkout.addEventListener("click", finishWorkout);
+els.toggleIncrease.addEventListener("click", () => {
+  setIncreaseMode(!activeSession.useSuggestedIncreases);
+});
+
 els.cancelWorkout.addEventListener("click", () => {
   activeSession = null;
   els.workoutNotes.value = "";

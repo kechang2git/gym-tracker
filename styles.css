@@ -208,6 +208,29 @@ h3 {
   gap: 12px;
 }
 
+.increase-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.increase-control p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.increase-control.active {
+  border-color: var(--primary);
+  background: var(--soft-blue);
+}
+
 .exercise-list {
   display: grid;
   gap: 12px;
@@ -446,5 +469,10 @@ dialog::backdrop {
   .set-row label {
     display: block;
     margin-bottom: 4px;
+  }
+
+  .increase-control {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
