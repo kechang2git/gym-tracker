@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gym Tracker</title>
+    <meta
+      name="description"
+      content="Local-first workout tracker for four full-body gym routines."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Local workout log</p>
+        <h1>Gym Tracker</h1>
+      </div>
+      <button class="secondary small" id="backupButton" type="button">Backup</button>
+    </header>
+
+    <main>
+      <section class="panel today-panel">
+        <div>
+          <p class="eyebrow">Today</p>
+          <h2 id="todayTitle">Choose a workout</h2>
+          <p id="todaySubtext">Pick one of your four full-body templates.</p>
+        </div>
+        <div class="stats-row">
+          <div>
+            <strong id="weekCount">0</strong>
+            <span>this week</span>
+          </div>
+          <div>
+            <strong id="readyCount">0</strong>
+            <span>ready up</span>
+          </div>
+          <div>
+            <strong id="totalSessions">0</strong>
+            <span>sessions</span>
+          </div>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="App sections">
+        <button class="tab active" data-view="workoutView" type="button">Workout</button>
+        <button class="tab" data-view="progressView" type="button">Progress</button>
+        <button class="tab" data-view="historyView" type="button">History</button>
+      </nav>
+
+      <section id="workoutView" class="view active">
+        <div class="template-grid" id="templateGrid"></div>
+        <section class="panel workout-panel hidden" id="activeWorkoutPanel">
+          <div class="workout-heading">
+            <div>
+              <p class="eyebrow">Active workout</p>
+              <h2 id="activeWorkoutName"></h2>
+            </div>
+            <button class="secondary small" id="cancelWorkout" type="button">Cancel</button>
+          </div>
+          <div class="exercise-list" id="exerciseList"></div>
+          <label class="notes-label" for="workoutNotes">Session notes</label>
+          <textarea
+            id="workoutNotes"
+            rows="3"
+            placeholder="Energy, pain, form notes, cardio, anything useful."
+          ></textarea>
+          <button class="primary finish-button" id="finishWorkout" type="button">
+            Finish Workout
+          </button>
+        </section>
+      </section>
+
+      <section id="progressView" class="view">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Exercise progress</p>
+              <h2>Charts</h2>
+            </div>
+            <select id="exerciseSelect" aria-label="Select exercise"></select>
+          </div>
+          <div id="chartArea" class="chart-area"></div>
+          <div id="exerciseSummary" class="summary-grid"></div>
+        </section>
+      </section>
+
+      <section id="historyView" class="view">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Saved locally</p>
+              <h2>Workout History</h2>
+            </div>
+            <button class="danger small" id="clearData" type="button">Clear</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="backupDialog">
+      <form method="dialog" class="dialog-content">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Backup</p>
+            <h2>Export or import data</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="Close" type="submit">×</button>
+        </div>
+        <p class="muted">
+          Export saves a JSON backup. Import restores from a JSON file.
+          Folder save is available only in browsers that support folder access.
+        </p>
+        <div class="button-stack">
+          <button class="primary" id="exportDownload" type="button">Export Backup</button>
+          <button class="secondary" id="saveToFolder" type="button">Save To Folder</button>
+          <label class="file-button">
+            Import Backup
+            <input id="importFile" type="file" accept="application/json,.json" />
+          </label>
+        </div>
+        <p class="status" id="backupStatus" role="status"></p>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
