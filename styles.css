@@ -351,6 +351,28 @@ select {
   max-width: 320px;
 }
 
+.progress-mode {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.progress-mode-button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  min-height: 42px;
+  font-weight: 800;
+}
+
+.progress-mode-button.active {
+  border-color: var(--primary);
+  background: var(--soft-blue);
+  color: var(--primary);
+}
+
 .primary,
 .secondary,
 .danger,
@@ -416,6 +438,51 @@ select {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 12px;
+}
+
+.workout-movement-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.movement-progress-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.movement-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.movement-stats span,
+.status-badge {
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: var(--muted);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-badge.increase {
+  background: var(--soft-green);
+  color: var(--good);
+}
+
+.status-badge.reduce {
+  background: #fff7e6;
+  color: var(--warn);
 }
 
 .history-list {
@@ -488,8 +555,13 @@ dialog::backdrop {
 
   .template-grid,
   .cardio-grid,
+  .movement-progress-card,
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .movement-stats {
+    justify-content: flex-start;
   }
 
   .set-row {

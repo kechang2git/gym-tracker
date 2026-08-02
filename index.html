@@ -8,7 +8,7 @@
       name="description"
       content="Local-first workout tracker for four full-body gym routines."
     />
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=6" />
   </head>
   <body>
     <header class="app-header">
@@ -73,15 +73,33 @@
 
       <section id="progressView" class="view">
         <section class="panel">
+          <div class="progress-mode" aria-label="Progress view">
+            <button class="progress-mode-button active" data-progress-mode="exercise" type="button">By Exercise</button>
+            <button class="progress-mode-button" data-progress-mode="workout" type="button">By Workout</button>
+          </div>
+          <div id="exerciseProgressPanel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Exercise progress</p>
+                <h2>Charts</h2>
+              </div>
+              <select id="exerciseSelect" aria-label="Select exercise"></select>
+            </div>
+            <div id="chartArea" class="chart-area"></div>
+            <div id="exerciseSummary" class="summary-grid"></div>
+          </div>
+          <div id="workoutProgressPanel" class="hidden">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Exercise progress</p>
-              <h2>Charts</h2>
+                <p class="eyebrow">Workout progress</p>
+                <h2>Session View</h2>
             </div>
-            <select id="exerciseSelect" aria-label="Select exercise"></select>
+              <select id="workoutSelect" aria-label="Select workout"></select>
           </div>
-          <div id="chartArea" class="chart-area"></div>
-          <div id="exerciseSummary" class="summary-grid"></div>
+            <div id="workoutChartArea" class="chart-area"></div>
+            <div id="workoutSummary" class="summary-grid"></div>
+            <div id="workoutMovementList" class="workout-movement-list"></div>
+          </div>
         </section>
       </section>
 
@@ -124,6 +142,6 @@
       </form>
     </dialog>
 
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
   </body>
 </html>

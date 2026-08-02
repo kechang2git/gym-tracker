@@ -81,9 +81,16 @@ const els = {
   weekCount: document.querySelector("#weekCount"),
   readyCount: document.querySelector("#readyCount"),
   totalSessions: document.querySelector("#totalSessions"),
+  progressModeButtons: document.querySelectorAll("[data-progress-mode]"),
+  exerciseProgressPanel: document.querySelector("#exerciseProgressPanel"),
+  workoutProgressPanel: document.querySelector("#workoutProgressPanel"),
   exerciseSelect: document.querySelector("#exerciseSelect"),
+  workoutSelect: document.querySelector("#workoutSelect"),
   chartArea: document.querySelector("#chartArea"),
   exerciseSummary: document.querySelector("#exerciseSummary"),
+  workoutChartArea: document.querySelector("#workoutChartArea"),
+  workoutSummary: document.querySelector("#workoutSummary"),
+  workoutMovementList: document.querySelector("#workoutMovementList"),
   historyList: document.querySelector("#historyList"),
   backupButton: document.querySelector("#backupButton"),
   backupDialog: document.querySelector("#backupDialog"),
@@ -135,7 +142,9 @@ function render() {
   renderTemplates();
   renderDashboard();
   renderProgressOptions();
+  renderWorkoutOptions();
   renderChart();
+  renderWorkoutProgress();
   renderHistory();
 }
 
@@ -400,6 +409,51 @@ function getExerciseHistory(exerciseId) {
     .reverse();
 }
 
+function getWorkoutHistory(templateId) {
+  return state.sessions.filter((session) => session.templateId === templateId).reverse();
+}
+
+function getExerciseHistoryForWorkout(templateId, exerciseId) {
+  return getWorkoutHistory(templateId)
+    .flatMap((session) =>
+      (session.exercises || [])
+        .filter((item) => item.exerciseId === exerciseId)
+        .map((item) => ({ ...item, date: session.date, templateName: session.templateName })),
+    );
+}
+
+function getAllWorkoutTemplates() {
+  return [...templates, ...cardioTemplates];
+}
+
+function getSessionVolume(session) {
+  return (session.exercises || []).reduce(
+    (sum, exerciseEntry) =>
+      sum +
+      exerciseEntry.sets
+        .filter((set) => set.done !== false)
+        .reduce((setSum, set) => setSum + (Number(set.weight) || 0) * (Number(set.reps) || 0), 0),
+    0,
+  );
+}
+
+function getCompletedSetCount(session) {
+  return (session.exercises || []).reduce(
+    (sum, exerciseEntry) => sum + exerciseEntry.sets.filter((set) => set.done !== false).length,
+    0,
+  );
+}
+
+function getBestWeight(entry) {
+  return Math.max(...entry.sets.map((set) => Number(set.weight) || 0));
+}
+
+function getEntryVolume(entry) {
+  return entry.sets
+    .filter((set) => set.done !== false)
+    .reduce((sum, set) => sum + (Number(set.weight) || 0) * (Number(set.reps) || 0), 0);
+}
+
 function getSuggestion(templateExercise) {
   return getSuggestionById(templateExercise.id, templateExercise);
 }
@@ -456,6 +510,14 @@ function renderProgressOptions() {
   if (current) els.exerciseSelect.value = current;
 }
 
+function renderWorkoutOptions() {
+  const current = els.workoutSelect.value;
+  els.workoutSelect.innerHTML = getAllWorkoutTemplates()
+    .map((item) => `<option value="${item.id}">${item.name}</option>`)
+    .join("");
+  if (current) els.workoutSelect.value = current;
+}
+
 function renderChart() {
   const exerciseId = els.exerciseSelect.value || getAllExercises()[0]?.id;
   if (!exerciseId) return;
@@ -483,7 +545,91 @@ function renderChart() {
   `;
 }
 
-function makeLineChart(values, labels) {
+function renderWorkoutProgress() {
+  const workoutId = els.workoutSelect.value || getAllWorkoutTemplates()[0]?.id;
+  if (!workoutId) return;
+  const template = getAllWorkoutTemplates().find((item) => item.id === workoutId);
+  const history = getWorkoutHistory(workoutId);
+
+  if (!history.length) {
+    els.workoutChartArea.innerHTML = `<div class="chart-empty">No logged sessions yet for this workout.</div>`;
+    els.workoutSummary.innerHTML = "";
+    els.workoutMovementList.innerHTML = renderWorkoutMovementList(template, []);
+    return;
+  }
+
+  if (template.type === "cardio") {
+    renderCardioProgress(template, history);
+    return;
+  }
+
+  const volumes = history.map(getSessionVolume);
+  const completedSets = history.map(getCompletedSetCount);
+  const latest = history.at(-1);
+  const readyCount = template.exercises.filter((item) => getSuggestion(item).status === "increase").length;
+
+  els.workoutChartArea.innerHTML = makeLineChart(volumes, history.map((item) => formatShortDate(item.date)), "Total volume per session");
+  els.workoutSummary.innerHTML = `
+    <div class="summary-card"><strong>${Math.round(Math.max(...volumes))}</strong><span>best volume</span></div>
+    <div class="summary-card"><strong>${completedSets.at(-1)}</strong><span>latest sets</span></div>
+    <div class="summary-card"><strong>${readyCount}</strong><span>ready up</span></div>
+  `;
+  els.workoutMovementList.innerHTML = renderWorkoutMovementList(template, history);
+}
+
+function renderCardioProgress(template, history) {
+  const minutes = history.map((session) => Number(session.cardio?.minutes) || 0);
+  const levels = history.map((session) => Number(session.cardio?.level) || 0);
+  const latest = history.at(-1);
+
+  els.workoutChartArea.innerHTML = makeLineChart(minutes, history.map((item) => formatShortDate(item.date)), "Minutes per session");
+  els.workoutSummary.innerHTML = `
+    <div class="summary-card"><strong>${Math.max(...minutes)}</strong><span>best minutes</span></div>
+    <div class="summary-card"><strong>${Math.max(...levels)}</strong><span>best level</span></div>
+    <div class="summary-card"><strong>${formatShortDate(latest.date)}</strong><span>last logged</span></div>
+  `;
+  els.workoutMovementList.innerHTML = `
+    <article class="movement-progress-card">
+      <div>
+        <strong>${template.name}</strong>
+        <p class="history-meta">Latest: Level ${latest.cardio?.level || "-"} · ${latest.cardio?.minutes || "-"} minutes</p>
+      </div>
+      <span class="status-badge">Cardio</span>
+    </article>
+  `;
+}
+
+function renderWorkoutMovementList(template, history) {
+  if (template.type === "cardio") return "";
+
+  return template.exercises
+    .map((exerciseItem) => {
+      const exerciseHistory = getExerciseHistoryForWorkout(template.id, exerciseItem.id);
+      const latest = exerciseHistory.at(-1);
+      const bestWeight = exerciseHistory.length ? Math.max(...exerciseHistory.map(getBestWeight)) : 0;
+      const bestVolume = exerciseHistory.length ? Math.max(...exerciseHistory.map(getEntryVolume)) : 0;
+      const suggestion = getSuggestion(exerciseItem);
+      return `
+        <article class="movement-progress-card">
+          <div>
+            <strong>${exerciseItem.name}</strong>
+            <p class="source">(${exerciseItem.source}) · ${exerciseItem.target}</p>
+            <p class="history-meta">
+              Latest: ${latest ? `${getBestWeight(latest)} lbs · ${formatShortDate(latest.date)}` : "not logged yet"}
+            </p>
+          </div>
+          <div class="movement-stats">
+            <span>Best ${bestWeight} lbs</span>
+            <span>Vol ${Math.round(bestVolume)}</span>
+            <span class="status-badge ${suggestion.status}">${suggestion.status === "increase" ? "Ready up" : suggestion.status}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function makeLineChart(values, labels, title = "Best weight per session") {
   const width = 640;
   const height = 260;
   const pad = 34;
@@ -512,7 +658,7 @@ function makeLineChart(values, labels) {
         `,
         )
         .join("")}
-      <text x="${pad}" y="22" font-size="13" fill="#637083">Best weight per session</text>
+      <text x="${pad}" y="22" font-size="13" fill="#637083">${title}</text>
       <text x="${width - pad}" y="${height - 10}" text-anchor="end" font-size="13" fill="#637083">${lastLabel}</text>
     </svg>
   `;
@@ -682,6 +828,17 @@ els.cancelWorkout.addEventListener("click", () => {
 });
 
 els.exerciseSelect.addEventListener("change", renderChart);
+els.workoutSelect.addEventListener("change", renderWorkoutProgress);
+
+els.progressModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    els.progressModeButtons.forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    const mode = button.dataset.progressMode;
+    els.exerciseProgressPanel.classList.toggle("hidden", mode !== "exercise");
+    els.workoutProgressPanel.classList.toggle("hidden", mode !== "workout");
+  });
+});
 
 els.backupButton.addEventListener("click", () => {
   setBackupStatus("");
