@@ -460,11 +460,12 @@ function getSuggestion(templateExercise) {
 
 function getSuggestionById(exerciseId, templateExercise = null) {
   const templateItem = templateExercise || getAllExercises().find((item) => item.id === exerciseId);
-  const last = getLastExerciseEntry(exerciseId);
+  const history = getExerciseHistory(exerciseId);
+  const last = history.at(-1);
   if (!last) {
     return {
       status: "start",
-      label: `Start with ${templateItem.defaults.join(" / ")} lbs.`,
+      label: getStartLabel(templateItem),
       nextWeights: templateItem.defaults,
     };
   }
@@ -473,13 +474,22 @@ function getSuggestionById(exerciseId, templateExercise = null) {
   const allTop = completed.length === last.sets.length && completed.every((set) => Number(set.reps) >= last.topReps);
   const missedHard = completed.some((set) => Number(set.reps) <= Math.max(5, last.topReps - 4));
   const weights = last.sets.map((set) => Number(set.weight) || 0);
+  const previous = history.at(-2);
 
-  if (allTop) {
+  if (allTop && previous && hasSameCompletedWeightsAtTop(last, previous)) {
     const increment = isDumbbellExercise(last.name) ? 2.5 : 5;
     return {
       status: "increase",
       label: `Ready: you can increase by ${increment} lbs when you choose.`,
       nextWeights: weights.map((weight) => weight + increment),
+    };
+  }
+
+  if (allTop) {
+    return {
+      status: "hold",
+      label: "Next time: repeat the same weight once more before increasing.",
+      nextWeights: weights,
     };
   }
 
@@ -496,6 +506,25 @@ function getSuggestionById(exerciseId, templateExercise = null) {
     label: "Next time: keep the same weight and complete the target reps.",
     nextWeights: weights,
   };
+}
+
+function hasSameCompletedWeightsAtTop(latest, previous) {
+  if (!previous || latest.sets.length !== previous.sets.length) return false;
+
+  return latest.sets.every((latestSet, index) => {
+    const previousSet = previous.sets[index];
+    if (latestSet.done === false || previousSet.done === false) return false;
+    const latestWeight = Number(latestSet.weight);
+    const previousWeight = Number(previousSet.weight);
+    if (!latestWeight || latestWeight !== previousWeight) return false;
+    return Number(latestSet.reps) >= latest.topReps && Number(previousSet.reps) >= previous.topReps;
+  });
+}
+
+function getStartLabel(templateItem) {
+  const hasDefaults = templateItem.defaults.some((weight) => weight !== "");
+  if (!hasDefaults) return "Start with blank weights and enter your working weight.";
+  return `Start with ${templateItem.defaults.join(" / ")} lbs.`;
 }
 
 function isDumbbellExercise(name) {
