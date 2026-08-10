@@ -864,7 +864,7 @@ function startOfWeek(date) {
 }
 
 function formatDate(value) {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(
+  return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(
     new Date(value),
   );
 }
@@ -879,7 +879,7 @@ function formatFullDate(value) {
 }
 
 function formatShortDate(value) {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(new Date(value));
 }
 
 function toDateInputValue(value) {
