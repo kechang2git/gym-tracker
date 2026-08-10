@@ -681,10 +681,10 @@ function renderWorkoutMovementList(template, history) {
 }
 
 function renderWorkoutSessionWeights(template, history) {
+  const previousWeights = new Map();
   return `
     <div class="session-weight-table" role="table" aria-label="Last weight per exercise by workout date">
-      ${[...history]
-        .reverse()
+      ${history
         .map((session) => {
           const entries = new Map((session.exercises || []).map((entry) => [entry.exerciseId, entry]));
           return `
@@ -698,10 +698,13 @@ function renderWorkoutSessionWeights(template, history) {
                   .map((exerciseItem) => {
                     const entry = entries.get(exerciseItem.id);
                     const weight = entry ? getLastSetWeight(entry) : 0;
+                    const previousWeight = previousWeights.get(exerciseItem.id) || 0;
+                    const increased = weight > 0 && previousWeight > 0 && weight > previousWeight;
+                    if (weight > 0) previousWeights.set(exerciseItem.id, weight);
                     return `
-                      <div class="session-weight-item">
+                      <div class="session-weight-item ${increased ? "weight-increased" : ""}">
                         <span>${exerciseItem.name}</span>
-                        <strong>${weight ? `${weight} lbs` : "-"}</strong>
+                        <strong>${weight ? `${weight} lbs${increased ? " ↑" : ""}` : "-"}</strong>
                       </div>
                     `;
                   })
