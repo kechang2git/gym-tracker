@@ -75,7 +75,9 @@ const els = {
   exerciseList: document.querySelector("#exerciseList"),
   finishWorkout: document.querySelector("#finishWorkout"),
   cancelWorkout: document.querySelector("#cancelWorkout"),
+  workoutDate: document.querySelector("#workoutDate"),
   workoutNotes: document.querySelector("#workoutNotes"),
+  todayDate: document.querySelector("#todayDate"),
   todayTitle: document.querySelector("#todayTitle"),
   todaySubtext: document.querySelector("#todaySubtext"),
   weekCount: document.querySelector("#weekCount"),
@@ -128,13 +130,16 @@ function loadState() {
   const fallback = { sessions: [] };
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return saved && Array.isArray(saved.sessions) ? saved : fallback;
+    if (!saved || !Array.isArray(saved.sessions)) return fallback;
+    saved.sessions = sortSessionList(saved.sessions);
+    return saved;
   } catch {
     return fallback;
   }
 }
 
 function saveState() {
+  sortSessions();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
@@ -169,6 +174,7 @@ function renderDashboard() {
   const ready = getAllExercises().filter((item) => getSuggestion(item).status === "increase");
   const last = state.sessions[0];
 
+  els.todayDate.textContent = formatFullDate(new Date());
   els.weekCount.textContent = weekSessions.length;
   els.readyCount.textContent = ready.length;
   els.totalSessions.textContent = state.sessions.length;
@@ -204,6 +210,7 @@ function startWorkout(templateId) {
   };
 
   els.activeWorkoutName.textContent = template.name;
+  els.workoutDate.value = toDateInputValue(activeSession.date);
   els.activeWorkoutPanel.classList.remove("hidden");
   renderActiveWorkout();
   renderDashboard();
@@ -227,6 +234,7 @@ function startCardioWorkout(template) {
   };
 
   els.activeWorkoutName.textContent = template.name;
+  els.workoutDate.value = toDateInputValue(activeSession.date);
   els.activeWorkoutPanel.classList.remove("hidden");
   renderCardioWorkout();
   renderDashboard();
@@ -364,10 +372,12 @@ function renderActiveWorkout() {
 
 function finishWorkout() {
   if (!activeSession) return;
+  activeSession.date = getSessionDateFromInput(els.workoutDate.value, activeSession.date);
   activeSession.notes = els.workoutNotes.value.trim();
   state.sessions.unshift(activeSession);
   saveState();
   activeSession = null;
+  els.workoutDate.value = "";
   els.workoutNotes.value = "";
   els.activeWorkoutPanel.classList.add("hidden");
   render();
@@ -437,6 +447,14 @@ function getSessionVolume(session) {
   );
 }
 
+function getSessionLastWeights(session) {
+  return (session.exercises || []).map((entry) => ({
+    exerciseId: entry.exerciseId,
+    name: entry.name,
+    weight: getLastSetWeight(entry),
+  }));
+}
+
 function getCompletedSetCount(session) {
   return (session.exercises || []).reduce(
     (sum, exerciseEntry) => sum + exerciseEntry.sets.filter((set) => set.done !== false).length,
@@ -446,6 +464,11 @@ function getCompletedSetCount(session) {
 
 function getBestWeight(entry) {
   return Math.max(...entry.sets.map((set) => Number(set.weight) || 0));
+}
+
+function getLastSetWeight(entry) {
+  const weightedSets = entry.sets.filter((set) => set.weight !== "" && set.weight !== undefined && set.weight !== null);
+  return weightedSets.length ? Number(weightedSets.at(-1).weight) || 0 : 0;
 }
 
 function getEntryVolume(entry) {
@@ -592,15 +615,14 @@ function renderWorkoutProgress() {
     return;
   }
 
-  const volumes = history.map(getSessionVolume);
-  const completedSets = history.map(getCompletedSetCount);
   const latest = history.at(-1);
   const readyCount = template.exercises.filter((item) => getSuggestion(item).status === "increase").length;
+  const latestLastWeights = getSessionLastWeights(latest).filter((item) => item.weight > 0);
 
-  els.workoutChartArea.innerHTML = makeLineChart(volumes, history.map((item) => formatShortDate(item.date)), "Total volume per session");
+  els.workoutChartArea.innerHTML = renderWorkoutSessionWeights(template, history);
   els.workoutSummary.innerHTML = `
-    <div class="summary-card"><strong>${Math.round(Math.max(...volumes))}</strong><span>best volume</span></div>
-    <div class="summary-card"><strong>${completedSets.at(-1)}</strong><span>latest sets</span></div>
+    <div class="summary-card"><strong>${formatShortDate(latest.date)}</strong><span>latest workout</span></div>
+    <div class="summary-card"><strong>${latestLastWeights.length}</strong><span>weights logged</span></div>
     <div class="summary-card"><strong>${readyCount}</strong><span>ready up</span></div>
   `;
   els.workoutMovementList.innerHTML = renderWorkoutMovementList(template, history);
@@ -644,7 +666,7 @@ function renderWorkoutMovementList(template, history) {
             <strong>${exerciseItem.name}</strong>
             <p class="source">(${exerciseItem.source}) · ${exerciseItem.target}</p>
             <p class="history-meta">
-              Latest: ${latest ? `${getBestWeight(latest)} lbs · ${formatShortDate(latest.date)}` : "not logged yet"}
+              Latest: ${latest ? `${getLastSetWeight(latest)} lbs · ${formatShortDate(latest.date)}` : "not logged yet"}
             </p>
           </div>
           <div class="movement-stats">
@@ -656,6 +678,41 @@ function renderWorkoutMovementList(template, history) {
       `;
     })
     .join("");
+}
+
+function renderWorkoutSessionWeights(template, history) {
+  return `
+    <div class="session-weight-table" role="table" aria-label="Last weight per exercise by workout date">
+      ${[...history]
+        .reverse()
+        .map((session) => {
+          const entries = new Map((session.exercises || []).map((entry) => [entry.exerciseId, entry]));
+          return `
+            <article class="session-weight-row">
+              <div class="session-weight-date">
+                <strong>${formatShortDate(session.date)}</strong>
+                <span>${getCompletedSetCount(session)} sets</span>
+              </div>
+              <div class="session-weight-list">
+                ${template.exercises
+                  .map((exerciseItem) => {
+                    const entry = entries.get(exerciseItem.id);
+                    const weight = entry ? getLastSetWeight(entry) : 0;
+                    return `
+                      <div class="session-weight-item">
+                        <span>${exerciseItem.name}</span>
+                        <strong>${weight ? `${weight} lbs` : "-"}</strong>
+                      </div>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function makeLineChart(values, labels, title = "Best weight per session") {
@@ -783,6 +840,7 @@ async function importBackup(file) {
       throw new Error("Invalid backup");
     }
     state = importedState;
+    sortSessions();
     saveState();
     render();
     setBackupStatus("Backup imported.");
@@ -811,8 +869,38 @@ function formatDate(value) {
   );
 }
 
+function formatFullDate(value) {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 function formatShortDate(value) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(value));
+}
+
+function toDateInputValue(value) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getSessionDateFromInput(inputValue, fallback) {
+  if (!inputValue) return fallback;
+  return new Date(`${inputValue}T12:00:00`).toISOString();
+}
+
+function sortSessions() {
+  state.sessions = sortSessionList(state.sessions);
+}
+
+function sortSessionList(sessions) {
+  return sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 function escapeHtml(value) {
@@ -851,9 +939,15 @@ document.addEventListener("input", (event) => {
 els.finishWorkout.addEventListener("click", finishWorkout);
 els.cancelWorkout.addEventListener("click", () => {
   activeSession = null;
+  els.workoutDate.value = "";
   els.workoutNotes.value = "";
   els.activeWorkoutPanel.classList.add("hidden");
   renderDashboard();
+});
+
+els.workoutDate.addEventListener("change", () => {
+  if (!activeSession) return;
+  activeSession.date = getSessionDateFromInput(els.workoutDate.value, activeSession.date);
 });
 
 els.exerciseSelect.addEventListener("change", renderChart);

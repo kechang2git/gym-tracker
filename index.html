@@ -8,7 +8,7 @@
       name="description"
       content="Local-first workout tracker for four full-body gym routines."
     />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
   </head>
   <body>
     <header class="app-header">
@@ -23,6 +23,7 @@
       <section class="panel today-panel">
         <div>
           <p class="eyebrow">Today</p>
+          <p id="todayDate" class="today-date"></p>
           <h2 id="todayTitle">Choose a workout</h2>
           <p id="todaySubtext">Pick one of your four full-body templates.</p>
         </div>
@@ -56,7 +57,13 @@
               <p class="eyebrow">Active workout</p>
               <h2 id="activeWorkoutName"></h2>
             </div>
-            <button class="secondary small" id="cancelWorkout" type="button">Cancel</button>
+            <div class="active-controls">
+              <label class="date-field" for="workoutDate">
+                Date
+                <input id="workoutDate" type="date" />
+              </label>
+              <button class="secondary small" id="cancelWorkout" type="button">Cancel</button>
+            </div>
           </div>
           <div class="exercise-list" id="exerciseList"></div>
           <label class="notes-label" for="workoutNotes">Session notes</label>
@@ -142,6 +149,6 @@
       </form>
     </dialog>
 
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=9"></script>
   </body>
 </html>
