@@ -575,9 +575,7 @@ function renderChart() {
   if (!exerciseId) return;
   const history = getExerciseHistory(exerciseId);
   const bestWeights = history.map((entry) => Math.max(...entry.sets.map((set) => Number(set.weight) || 0)));
-  const volumes = history.map((entry) =>
-    entry.sets.reduce((sum, set) => sum + (Number(set.weight) || 0) * (Number(set.reps) || 0), 0),
-  );
+  const volumes = history.map(getEntryVolume);
 
   if (!history.length) {
     els.chartArea.innerHTML = `<div class="chart-empty">No logged sets yet for this exercise.</div>`;
@@ -682,11 +680,24 @@ function renderWorkoutMovementList(template, history) {
 
 function renderWorkoutSessionWeights(template, history) {
   const previousWeights = new Map();
+  const rows = history.map((session) => {
+    const entries = new Map((session.exercises || []).map((entry) => [entry.exerciseId, entry]));
+    const weights = template.exercises.map((exerciseItem) => {
+      const entry = entries.get(exerciseItem.id);
+      const weight = entry ? getLastSetWeight(entry) : 0;
+      const previousWeight = previousWeights.get(exerciseItem.id) || 0;
+      const increased = weight > 0 && previousWeight > 0 && weight > previousWeight;
+      if (weight > 0) previousWeights.set(exerciseItem.id, weight);
+      return { exerciseItem, weight, increased };
+    });
+    return { session, weights };
+  });
+
   return `
     <div class="session-weight-table" role="table" aria-label="Last weight per exercise by workout date">
-      ${history
-        .map((session) => {
-          const entries = new Map((session.exercises || []).map((entry) => [entry.exerciseId, entry]));
+      ${rows
+        .reverse()
+        .map(({ session, weights }) => {
           return `
             <article class="session-weight-row">
               <div class="session-weight-date">
@@ -694,13 +705,8 @@ function renderWorkoutSessionWeights(template, history) {
                 <span>${getCompletedSetCount(session)} sets</span>
               </div>
               <div class="session-weight-list">
-                ${template.exercises
-                  .map((exerciseItem) => {
-                    const entry = entries.get(exerciseItem.id);
-                    const weight = entry ? getLastSetWeight(entry) : 0;
-                    const previousWeight = previousWeights.get(exerciseItem.id) || 0;
-                    const increased = weight > 0 && previousWeight > 0 && weight > previousWeight;
-                    if (weight > 0) previousWeights.set(exerciseItem.id, weight);
+                ${weights
+                  .map(({ exerciseItem, weight, increased }) => {
                     return `
                       <div class="session-weight-item ${increased ? "weight-increased" : ""}">
                         <span>${exerciseItem.name}</span>
