@@ -57,6 +57,21 @@ const templates = [
       exercise("overhead-tricep", "Dumbbell Seated Overhead Tricep Extension", "DB-2", "3 x 10-12", [10, 15, 15], 12),
     ],
   },
+  {
+    id: "mini-workout",
+    name: "Mini Workout",
+    focus: "Quick machine session",
+    exercises: [
+      exercise("machine-ab-crunch", "Seated Machine Ab Crunch", "Mini", "3 x 10-12", ["", "", ""], 12, {
+        keepRepsWhenWeightBlank: true,
+      }),
+      exercise("lat-pulldown", "Close Grip Strict Lat Pulldown", "Machine-1", "3 x 8-12", [50, 60, 70], 12),
+      exercise("seated-leg-press", "Seated Leg Press", "Machine-1", "3 x 10-12", [60, 75, 90], 12),
+      exercise("hip-adduction", "Machine Seated Hip Adduction", "Mini", "3 x 10-12", ["", "", ""], 12, {
+        keepRepsWhenWeightBlank: true,
+      }),
+    ],
+  },
 ];
 
 const cardioTemplates = [
@@ -187,7 +202,7 @@ function renderDashboard() {
     els.todaySubtext.textContent = `Last workout: ${last.templateName} on ${formatDate(last.date)}.`;
   } else {
     els.todayTitle.textContent = "Choose a workout";
-    els.todaySubtext.textContent = "Pick one of your four full-body templates.";
+    els.todaySubtext.textContent = "Pick one of your workout templates.";
   }
 }
 

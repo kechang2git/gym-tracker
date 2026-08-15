@@ -1,11 +1,12 @@
 # Gym Tracker
 
-Local-first web app for tracking four reusable workout templates:
+Local-first web app for tracking reusable workout templates:
 
 - Machine Full Body A
 - Machine Full Body B
 - Dumbbell Full Body A
 - Dumbbell Full Body B
+- Mini Workout
 
 ## Run Locally
 
@@ -26,7 +27,7 @@ On most phones, folder-level save access is limited by the browser. The reliable
 mobile flow is to export a JSON file to Downloads/iCloud/Files and import that
 file later.
 
-## GitHub Pages
+## GitHub
 
-This app is static HTML/CSS/JS, so it can be hosted with GitHub Pages without a
-backend.
+This app is static HTML/CSS/JS, so it can be committed to GitHub and hosted with
+GitHub Pages without a backend.
