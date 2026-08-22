@@ -8,7 +8,7 @@
       name="description"
       content="Local-first workout tracker for gym routines."
     />
-    <link rel="stylesheet" href="styles.css?v=9" />
+    <link rel="stylesheet" href="styles.css?v=10" />
   </head>
   <body>
     <header class="app-header">
@@ -16,7 +16,10 @@
         <p class="eyebrow">Local workout log</p>
         <h1>Gym Tracker</h1>
       </div>
-      <button class="secondary small" id="backupButton" type="button">Backup</button>
+      <div class="header-actions">
+        <button class="secondary small" onclick="refreshFromGitHub()" type="button">Refresh</button>
+        <button class="secondary small" id="backupButton" type="button">Backup</button>
+      </div>
     </header>
 
     <main>
@@ -136,7 +139,7 @@
             <p class="eyebrow">Backup</p>
             <h2>Export or import data</h2>
           </div>
-          <button class="icon-button" value="close" aria-label="Close" type="submit">×</button>
+          <button class="dialog-close-button" value="close" type="submit">Cancel</button>
         </div>
         <p class="muted">
           Export saves a JSON backup. Import restores from a JSON file.
@@ -154,6 +157,13 @@
       </form>
     </dialog>
 
+    <script>
+      function refreshFromGitHub() {
+        const url = new URL(window.location.href);
+        url.searchParams.set("refresh", Date.now().toString());
+        window.location.replace(url.toString());
+      }
+    </script>
     <script src="app.js?v=14"></script>
   </body>
 </html>
