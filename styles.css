@@ -1,18 +1,18 @@
 :root {
   color-scheme: light;
-  --bg: #f4f6f8;
+  --bg: #f5f5f7;
   --panel: #ffffff;
-  --text: #15191f;
-  --muted: #637083;
-  --line: #dde3ea;
-  --primary: #1456d9;
-  --primary-dark: #0d3fa5;
-  --good: #117a42;
-  --warn: #956000;
-  --danger: #b42318;
-  --soft-blue: #e8f0ff;
-  --soft-green: #e8f7ef;
-  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --line: #d2d2d7;
+  --primary: #007aff;
+  --primary-dark: #0066d6;
+  --good: #248a3d;
+  --warn: #a05a00;
+  --danger: #d70015;
+  --soft-blue: #eaf3ff;
+  --soft-green: #edf8f1;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -48,7 +48,7 @@ button {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 18px 12px;
-  background: rgba(244, 246, 248, 0.92);
+  background: rgba(245, 245, 247, 0.88);
   backdrop-filter: blur(16px);
 }
 
@@ -133,7 +133,7 @@ h3 {
 .stats-row div,
 .summary-card {
   border-radius: 8px;
-  background: #f8fafc;
+  background: #f9f9fb;
   padding: 12px;
 }
 
@@ -159,7 +159,7 @@ h3 {
 .tab {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.86);
   color: var(--muted);
   min-height: 44px;
   font-weight: 700;
@@ -200,6 +200,12 @@ h3 {
 .template-card span {
   color: var(--muted);
   font-size: 13px;
+}
+
+.template-card:active,
+.secondary:active,
+.file-button:active {
+  background: #f2f2f7;
 }
 
 .workout-panel {
@@ -488,7 +494,7 @@ select {
 .secondary,
 .file-button {
   border: 1px solid var(--line);
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
   color: var(--text);
 }
 
@@ -712,7 +718,6 @@ dialog::backdrop {
   }
 
   .template-grid,
-  .stats-row,
   .cardio-grid,
   .add-existing-row,
   .custom-exercise-grid,
@@ -721,6 +726,28 @@ dialog::backdrop {
   .session-weight-list,
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .stats-row div {
+    min-width: 0;
+    padding: 8px 4px;
+    text-align: center;
+  }
+
+  .stats-row strong {
+    font-size: 18px;
+  }
+
+  .stats-row span {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: 10px;
+    line-height: 1.15;
   }
 
   .movement-stats {
