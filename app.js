@@ -96,6 +96,7 @@ const els = {
   todayTitle: document.querySelector("#todayTitle"),
   todaySubtext: document.querySelector("#todaySubtext"),
   weekCount: document.querySelector("#weekCount"),
+  cardioWeekCount: document.querySelector("#cardioWeekCount"),
   readyCount: document.querySelector("#readyCount"),
   totalSessions: document.querySelector("#totalSessions"),
   progressModeButtons: document.querySelectorAll("[data-progress-mode]"),
@@ -108,6 +109,7 @@ const els = {
   workoutChartArea: document.querySelector("#workoutChartArea"),
   workoutSummary: document.querySelector("#workoutSummary"),
   workoutMovementList: document.querySelector("#workoutMovementList"),
+  exerciseEditorControls: document.querySelector("#exerciseEditorControls"),
   historyList: document.querySelector("#historyList"),
   backupButton: document.querySelector("#backupButton"),
   backupDialog: document.querySelector("#backupDialog"),
@@ -186,11 +188,14 @@ function renderTemplates() {
 function renderDashboard() {
   const weekStart = startOfWeek(new Date());
   const weekSessions = state.sessions.filter((session) => new Date(session.date) >= weekStart);
+  const weekStrengthSessions = weekSessions.filter((session) => session.type !== "cardio");
+  const weekCardioSessions = weekSessions.filter((session) => session.type === "cardio");
   const ready = getAllExercises().filter((item) => getSuggestion(item).status === "increase");
   const last = state.sessions[0];
 
   els.todayDate.textContent = formatFullDate(new Date());
-  els.weekCount.textContent = weekSessions.length;
+  els.weekCount.textContent = weekStrengthSessions.length;
+  els.cardioWeekCount.textContent = weekCardioSessions.length;
   els.readyCount.textContent = ready.length;
   els.totalSessions.textContent = state.sessions.length;
 
@@ -258,6 +263,7 @@ function startCardioWorkout(template) {
 
 function renderCardioWorkout() {
   if (!activeSession) return;
+  els.exerciseEditorControls.innerHTML = "";
   els.exerciseList.innerHTML = `
     <article class="exercise-card">
       <div class="exercise-top">
@@ -298,6 +304,9 @@ function buildActiveExercise(item, useSuggestedIncreases) {
     source: item.source,
     target: item.target,
     topReps: item.topReps,
+    defaults: item.defaults || ["", "", ""],
+    keepRepsWhenWeightBlank: item.keepRepsWhenWeightBlank || false,
+    custom: item.custom || false,
     sets: Array.from({ length: item.sets }, (_, index) => {
       const hasWeight = weights[index] !== undefined && weights[index] !== "";
       return {
@@ -312,7 +321,12 @@ function buildActiveExercise(item, useSuggestedIncreases) {
 function toggleExerciseIncrease(exerciseId) {
   if (!activeSession) return;
   const template = templates.find((item) => item.id === activeSession.templateId);
-  const templateExercise = template.exercises.find((item) => item.id === exerciseId);
+  const activeExercise = activeSession.exercises.find((item) => item.exerciseId === exerciseId);
+  const templateExercise =
+    template?.exercises.find((item) => item.id === exerciseId) ||
+    getAllExercises().find((item) => item.id === exerciseId) ||
+    activeExercise;
+  if (!templateExercise) return;
   const currentIndex = activeSession.increasedExerciseIds.indexOf(exerciseId);
   const shouldIncrease = currentIndex === -1;
 
@@ -331,17 +345,18 @@ function renderActiveWorkout() {
   if (!activeSession) return;
   els.exerciseList.innerHTML = activeSession.exercises
     .map((item, exerciseIndex) => {
-      const suggestion = getSuggestionById(item.exerciseId);
+      const suggestion = getSuggestionById(item.exerciseId, item);
       const isIncreased = activeSession.increasedExerciseIds.includes(item.exerciseId);
       const canIncrease = suggestion.status === "increase";
       return `
         <article class="exercise-card ${isIncreased ? "increase-active" : ""}">
           <div class="exercise-top">
             <div>
-              <h3>${item.name}</h3>
-              <p class="source">(${item.source}) · ${item.target}</p>
+              <h3>${escapeHtml(item.name)}</h3>
+              <p class="source">(${escapeHtml(item.source)}) · ${escapeHtml(item.target)}</p>
             </div>
             <div class="exercise-actions">
+              <button class="danger small" type="button" data-remove-exercise-index="${exerciseIndex}">Delete</button>
               ${
                 canIncrease
                   ? `<button class="${isIncreased ? "primary" : "secondary"} small increase-button" type="button" data-increase-exercise-id="${item.exerciseId}">
@@ -383,6 +398,121 @@ function renderActiveWorkout() {
       `;
     })
     .join("");
+  renderExerciseEditorControls();
+}
+
+function renderExerciseEditorControls() {
+  if (!activeSession || activeSession.type === "cardio") {
+    els.exerciseEditorControls.innerHTML = "";
+    return;
+  }
+
+  els.exerciseEditorControls.innerHTML = `
+    <section class="exercise-editor">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Edit this session</p>
+          <h3>Add Exercise</h3>
+        </div>
+      </div>
+      <div class="add-existing-row">
+        <label for="existingExerciseSelect">Existing strength exercise</label>
+        <select id="existingExerciseSelect">
+          ${getAllExercises()
+            .map((item) => `<option value="${item.id}">${escapeHtml(item.name)} (${escapeHtml(item.source)})</option>`)
+            .join("")}
+        </select>
+        <button class="secondary small" id="addExistingExercise" type="button">Add Selected</button>
+      </div>
+      <div class="custom-exercise-grid">
+        <div>
+          <label for="customExerciseName">New exercise name</label>
+          <input id="customExerciseName" type="text" placeholder="Exercise name" />
+        </div>
+        <div>
+          <label for="customExerciseSource">Source</label>
+          <input id="customExerciseSource" type="text" placeholder="Custom" />
+        </div>
+        <div>
+          <label for="customExerciseTarget">Target</label>
+          <input id="customExerciseTarget" type="text" value="3 x 10-12" />
+        </div>
+        <div>
+          <label for="customExerciseTopReps">Default reps</label>
+          <input id="customExerciseTopReps" type="number" min="1" step="1" value="12" />
+        </div>
+        <div>
+          <label for="customWeight1">Set 1 lbs</label>
+          <input id="customWeight1" type="number" step="0.5" inputmode="decimal" />
+        </div>
+        <div>
+          <label for="customWeight2">Set 2 lbs</label>
+          <input id="customWeight2" type="number" step="0.5" inputmode="decimal" />
+        </div>
+        <div>
+          <label for="customWeight3">Set 3 lbs</label>
+          <input id="customWeight3" type="number" step="0.5" inputmode="decimal" />
+        </div>
+        <button class="secondary small" id="addCustomExercise" type="button">Add New Exercise</button>
+      </div>
+    </section>
+  `;
+}
+
+function removeActiveExercise(exerciseIndex) {
+  if (!activeSession || activeSession.type === "cardio") return;
+  const item = activeSession.exercises[exerciseIndex];
+  if (!item) return;
+  const confirmed = confirm(`Delete ${item.name} from this workout session?`);
+  if (!confirmed) return;
+  activeSession.exercises.splice(exerciseIndex, 1);
+  activeSession.increasedExerciseIds = activeSession.increasedExerciseIds.filter((id) => id !== item.exerciseId);
+  renderActiveWorkout();
+}
+
+function addExistingExerciseToSession() {
+  if (!activeSession || activeSession.type === "cardio") return;
+  const select = document.querySelector("#existingExerciseSelect");
+  const selected = getAllExercises().find((item) => item.id === select?.value);
+  if (!selected) return;
+  if (activeSession.exercises.some((item) => item.exerciseId === selected.id)) {
+    alert(`${selected.name} is already in this workout session.`);
+    return;
+  }
+  activeSession.exercises.push(buildActiveExercise(selected, false));
+  renderActiveWorkout();
+}
+
+function addCustomExerciseToSession() {
+  if (!activeSession || activeSession.type === "cardio") return;
+  const name = document.querySelector("#customExerciseName")?.value.trim();
+  if (!name) {
+    alert("Enter a new exercise name first.");
+    return;
+  }
+
+  const source = document.querySelector("#customExerciseSource")?.value.trim() || "Custom";
+  const target = document.querySelector("#customExerciseTarget")?.value.trim() || "3 x 10-12";
+  const topReps = Number(document.querySelector("#customExerciseTopReps")?.value) || 12;
+  const defaults = [1, 2, 3].map((index) => {
+    const value = document.querySelector(`#customWeight${index}`)?.value;
+    return value === "" ? "" : Number(value);
+  });
+  const customExercise = exercise(makeCustomExerciseId(name), name, source, target, defaults, topReps, {
+    keepRepsWhenWeightBlank: true,
+  });
+  customExercise.custom = true;
+  activeSession.exercises.push(buildActiveExercise(customExercise, false));
+  renderActiveWorkout();
+}
+
+function makeCustomExerciseId(name) {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 32);
+  return `custom-${slug || "exercise"}-${Date.now()}`;
 }
 
 function finishWorkout() {
@@ -497,7 +627,14 @@ function getSuggestion(templateExercise) {
 }
 
 function getSuggestionById(exerciseId, templateExercise = null) {
-  const templateItem = templateExercise || getAllExercises().find((item) => item.id === exerciseId);
+  const templateItem =
+    templateExercise ||
+    getAllExercises().find((item) => item.id === exerciseId) || {
+      id: exerciseId,
+      name: "Custom Exercise",
+      defaults: ["", "", ""],
+      topReps: 12,
+    };
   const history = getExerciseHistory(exerciseId);
   const last = history.at(-1);
   if (!last) {
@@ -937,6 +1074,22 @@ function escapeHtml(value) {
 }
 
 document.addEventListener("click", (event) => {
+  const removeButton = event.target.closest("[data-remove-exercise-index]");
+  if (removeButton) {
+    removeActiveExercise(Number(removeButton.dataset.removeExerciseIndex));
+    return;
+  }
+
+  if (event.target.closest("#addExistingExercise")) {
+    addExistingExerciseToSession();
+    return;
+  }
+
+  if (event.target.closest("#addCustomExercise")) {
+    addCustomExerciseToSession();
+    return;
+  }
+
   const increaseButton = event.target.closest("[data-increase-exercise-id]");
   if (increaseButton) {
     toggleExerciseIncrease(increaseButton.dataset.increaseExerciseId);
