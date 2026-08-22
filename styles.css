@@ -52,6 +52,12 @@ button {
   backdrop-filter: blur(16px);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 main {
   width: min(980px, 100%);
   margin: 0 auto;
@@ -664,11 +670,14 @@ dialog::backdrop {
   padding: 16px;
 }
 
-.icon-button {
-  border: 0;
-  background: transparent;
-  font-size: 28px;
-  line-height: 1;
+.dialog-close-button {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff1f0;
+  color: var(--danger);
+  min-height: 38px;
+  padding: 0 12px;
+  font-weight: 800;
 }
 
 .button-stack {
@@ -691,6 +700,11 @@ dialog::backdrop {
 @media (max-width: 640px) {
   .app-header {
     padding-top: 14px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   main {
