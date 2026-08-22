@@ -120,7 +120,7 @@ h3 {
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
@@ -244,7 +244,9 @@ h3 {
 }
 
 .exercise-actions {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   justify-items: end;
   gap: 6px;
 }
@@ -359,6 +361,56 @@ h3 {
 .done-toggle input {
   width: 24px;
   height: 24px;
+}
+
+.exercise-editor {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.exercise-editor h3 {
+  margin: 0;
+}
+
+.add-existing-row,
+.custom-exercise-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.add-existing-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.add-existing-row label,
+.custom-exercise-grid label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.add-existing-row label {
+  grid-column: 1 / -1;
+}
+
+.custom-exercise-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.custom-exercise-grid input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.custom-exercise-grid button {
+  align-self: end;
 }
 
 .notes-label {
@@ -646,7 +698,10 @@ dialog::backdrop {
   }
 
   .template-grid,
+  .stats-row,
   .cardio-grid,
+  .add-existing-row,
+  .custom-exercise-grid,
   .movement-progress-card,
   .session-weight-row,
   .session-weight-list,
